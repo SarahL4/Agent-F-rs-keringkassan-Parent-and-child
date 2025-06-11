@@ -7,10 +7,11 @@ const inferenceClient = new InferenceClient(process.env.HF_API_KEY);
 // const MODEL = 'Qwen/Qwen2.5-72B-Instruct';
 // const PROVIDER = 'hf-inference';
 
-export async function getAnswerFromLLM(query, context) {
+export async function getAnswerFromLLMWorker(query, context) {
 	console.log('Start getting answer from LLM-Qwen/Qwen2.5-72B-Instruct.');
 	const prompt = `User question: ${query}
     Context: ${context}`;
+
 	/**You are a helpful assistant working at Försäkringskassan that can answer questions based on the provided context.
 			If you don't know the answer, just say "I don't know".
 			Do not mention any references to the context such as "Based on the context provided" or "According to the context".
@@ -24,10 +25,18 @@ export async function getAnswerFromLLM(query, context) {
 				{
 					type: 'text',
 					text: `Todays date is ${new Date().toISOString().split('T')[0]}. 
-			You are a helpful assistant that can retrieve by using the tools that are provided.
-			When giving the final answer, don't list the dates, 
-			answer in a more compelling encouraging way.
-			Answer in the language of the question.
+			You are a helpful assistant that provides BRIEF and DIRECT answers.
+					
+					IMPORTANT RULES:
+					1. Be extremely concise - answer in 1-2 sentences only
+					2. Focus only on the most relevant information
+					3. Answer in the same language as the user's question
+					4. If sources conflict, prefer Supabase information
+					5. No explanations or additional context - just the direct answer
+					6. If amount/numbers are involved, always include them
+					
+					Available context:
+					${context}
 			`,
 				},
 			],
@@ -49,6 +58,11 @@ export async function getAnswerFromLLM(query, context) {
 		provider: 'hf-inference',
 		messages: messages,
 		// max_tokens: 512,
+		parameters: {
+			max_new_tokens: 1024,
+			temperature: 0.3,
+			top_p: 0.95,
+		},
 	});
 
 	const responseMessage = response.choices[0].message;
