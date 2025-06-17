@@ -1,14 +1,14 @@
 :root {
-	--primary-color: #207144; /* 官方深绿色 */
+	--primary-color: #207144; /* Official dark green */
 	--secondary-color: #e6f0ff;
 	--text-color: #333333;
 	--background-color: #ffffff;
 	--border-radius: 4px;
 	--box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-	--header-bg: #207144; /* 头部背景色 */
-	--header-text: #ffffff; /* 头部文字色 */
+	--header-bg: #207144; /* Header background color */
+	--header-text: #ffffff; /* Header text color */
 	--link-color: #207144;
-	--hover-color: #14512e; /* 按钮悬停深绿色 */
+	--hover-color: #14512e; /* Button hover dark green */
 }
 
 * {
@@ -157,7 +157,7 @@ textarea:focus {
 	margin-top: 1rem;
 }
 
-/* 加载状态样式 */
+/* Loading state styles */
 .response-box p {
 	color: #6c757d;
 	text-align: center;

@@ -135,7 +135,7 @@ export async function rewriteSearchQuery(query) {
 				],
 			},
 		],
-		max_tokens: 512, //很重要。
+		max_tokens: 512, // Very important
 	});
 	console.log(chatCompletion.model);
 	return chatCompletion.choices[0].message.content;

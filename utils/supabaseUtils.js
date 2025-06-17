@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// 验证环境变量
+// Validate environment variables
 if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
 	console.error('Missing Supabase configuration. Please check your .env file.');
 	console.log('Required environment variables:');

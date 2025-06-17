@@ -52,7 +52,7 @@ tools to read files, browse the web and visit websites and gather the relevant
 information: do NOT guess or make up an answer.
 `.trim();
 
-// 从Supabase获取答案的函数
+// Function to get answer from Supabase
 async function supabaseWorker(query) {
 	try {
 		if (!query) {
@@ -99,7 +99,7 @@ async function supabaseWorker(query) {
 	}
 }
 
-// 使用Tavily进行网络搜索
+// Use Tavily for web search
 async function tavilyWorker(query) {
 	try {
 		const searchResults = await tavilyClient.search(query, {
