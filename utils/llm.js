@@ -7,10 +7,49 @@ const inferenceClient = new InferenceClient(process.env.HF_API_KEY);
 // const MODEL = 'Qwen/Qwen2.5-72B-Instruct';
 // const PROVIDER = 'hf-inference';
 
+// Helper function to estimate token count (rough estimate)
+function estimateTokenCount(text) {
+	if (!text) return 0;
+	const textStr = String(text);
+	return textStr.split(/\s+/).length * 1.3; // Rough estimate: words * 1.3
+}
+
+// Helper function to truncate context while preserving complete sentences
+function truncateContext(context, maxTokens) {
+	if (!context) return '';
+
+	// Convert context to string if it's not already
+	const textStr =
+		typeof context === 'string' ? context : JSON.stringify(context);
+
+	if (estimateTokenCount(textStr) <= maxTokens) {
+		return textStr;
+	}
+
+	const sentences = textStr.split(/[.!?]+\s+/);
+	let result = '';
+	let currentTokens = 0;
+
+	for (const sentence of sentences) {
+		const sentenceTokens = estimateTokenCount(sentence);
+		if (currentTokens + sentenceTokens > maxTokens) {
+			break;
+		}
+		result += sentence + '. ';
+		currentTokens += sentenceTokens;
+	}
+
+	return result.trim();
+}
+
 export async function getAnswerFromLLMWorker(query, context) {
 	console.log('Start getting answer from LLM-Qwen/Qwen2.5-72B-Instruct.');
+
+	// Limit context to ~1k tokens to leave room for system prompt and response
+	const truncatedContext = truncateContext(context, 1000);
+
 	const prompt = `User question: ${query}
-    Context: ${context}`;
+    Context: ${truncatedContext}`;
 
 	/**You are a helpful assistant working at Försäkringskassan that can answer questions based on the provided context.
 			If you don't know the answer, just say "I don't know".
@@ -36,7 +75,7 @@ export async function getAnswerFromLLMWorker(query, context) {
 					6. If amount/numbers are involved, always include them
 					
 					Available context:
-					${context}
+					${truncatedContext}
 			`,
 				},
 			],

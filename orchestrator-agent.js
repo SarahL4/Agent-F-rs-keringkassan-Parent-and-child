@@ -72,7 +72,7 @@ async function supabaseWorker(query) {
 		// Perform similarity search
 		const results = await performSimilaritySearch({
 			queryEmbedding: embedding,
-			maxResults: 30,
+			maxResults: 10,
 		});
 
 		if (!results || !Array.isArray(results) || results.length === 0) {
@@ -85,9 +85,9 @@ async function supabaseWorker(query) {
 
 		console.log('Top 3 highest score results:', topResults);
 
-		// Prepare text for LLM with length limit
+		// Prepare text for LLM with stricter length limit
 		const resultsText = results
-			.map((result) => result.text.substring(0, 1000))
+			.map((result) => result.text.substring(0, 500))
 			.join('\n\n');
 
 		// Call LLM with limited context
@@ -207,7 +207,7 @@ async function orchestrator(query) {
 
 	// Get combined answer from DeepSeek
 	const finalAnswer = await getAnswerFromLLMWorker(query, context);
-	console.log('Answer:', finalAnswer);
+	console.log('Final answer:', finalAnswer);
 
 	return {
 		query,
