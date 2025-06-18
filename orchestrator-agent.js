@@ -11,7 +11,7 @@ import { tavily } from '@tavily/core';
 import { HfInference } from '@huggingface/inference';
 import { generateSingleEmbedding } from './utils/generateEmbeddings.js';
 import { performSimilaritySearch } from './utils/supabaseUtils.js';
-import { rewriteSearchQuery, getAnswerFromLLMWorker } from './utils/llm.js';
+import { rewriteSearchQuery, getAnswerFromLLM } from './utils/llm.js';
 
 dotenv.config();
 
@@ -53,7 +53,7 @@ information: do NOT guess or make up an answer.
 `.trim();
 
 // 从Supabase获取答案的函数
-async function supabaseWorker(query) {
+async function getSupabaseAnswer(query) {
 	try {
 		if (!query) {
 			return res.status(400).json({ error: 'query required' });
@@ -74,24 +74,30 @@ async function supabaseWorker(query) {
 			queryEmbedding: embedding,
 			maxResults: 30,
 		});
+		// console.log('Results: ', results);
 
 		if (!results || !Array.isArray(results) || results.length === 0) {
 			console.error('No results returned from performSimilaritySearch');
 			return null;
 		}
+		console.log(results.length);
 
-		// Find the top 3 highest score results
-		const topResults = results.sort((a, b) => b.score - a.score).slice(0, 3);
+		// Find the top 5 highest score results
+		const topResults = results.sort((a, b) => b.score - a.score).slice(0, 5);
+		console.log('Top 5 highest score results:', topResults);
 
-		console.log('Top 3 highest score results:', topResults);
+		// Find the highest score result
+		const maxScoreResult = topResults[0];
+		console.log('Highest score result:', maxScoreResult);
 
-		// Prepare text for LLM with length limit
-		const resultsText = results
-			.map((result) => result.text.substring(0, 1000))
-			.join('\n\n');
+		const resultsText = [];
+		for (const result of results) {
+			resultsText.push(result.text);
+			// console.log('result text: ', result.text);
+		}
 
-		// Call LLM with limited context
-		const answer = await getAnswerFromLLMWorker(query, resultsText);
+		// Call LLM
+		const answer = await getAnswerFromLLM(query, resultsText.join('\n\n'));
 		return answer;
 	} catch (error) {
 		console.error('Error getting Supabase answer:', error);
@@ -100,7 +106,7 @@ async function supabaseWorker(query) {
 }
 
 // 使用Tavily进行网络搜索
-async function tavilyWorker(query) {
+async function searchWithTavily(query) {
 	try {
 		const searchResults = await tavilyClient.search(query, {
 			search_depth: 'advanced',
@@ -131,91 +137,52 @@ async function visitWebsite(url) {
 }
 
 // Use DeepSeek to generate answer
-// async function generateFinalAnswerWorker(prompt, context) {
-// 	try {
-// 		// Limit context size
-// 		const maxContextLength = 800; // character limit
-// 		let contextStr = JSON.stringify(context, null, 2);
-// 		if (contextStr.length > maxContextLength) {
-// 			contextStr = contextStr.substring(0, maxContextLength) + '...';
-// 		}
+async function generateResponse(prompt, context) {
+	try {
+		// Limit context size
+		const maxContextLength = 800; // character limit
+		let contextStr = JSON.stringify(context, null, 2);
+		if (contextStr.length > maxContextLength) {
+			contextStr = contextStr.substring(0, maxContextLength) + '...';
+		}
 
-// 		const chatCompletion = await inferenceClient.chatCompletion({
-// 			provider: 'hf-inference',
-// 			model: 'deepseek-ai/DeepSeek-R1-Distill-Qwen-32B',
-// 			messages: [
-// 				{
-// 					role: 'system',
-// 					content: `Today's date is ${new Date().toLocaleDateString()}.
-// 						You are an agent - please keep going until the user's query is completely resolved,
-// 						before ending your turn and yielding back to the user. Only terminate your turn
-// 						when you are sure that the problem is solved, or if you need more info from the user to solve the problem.
+		const chatCompletion = await inferenceClient.chatCompletion({
+			provider: 'hf-inference',
+			model: 'deepseek-ai/DeepSeek-R1-Distill-Qwen-32B',
+			messages: [
+				{
+					role: 'system',
+					content: `Today's date is ${new Date().toLocaleDateString()}.
+						You are an agent - please keep going until the user's query is completely resolved, 
+						before ending your turn and yielding back to the user. Only terminate your turn 
+						when you are sure that the problem is solved, or if you need more info from the user to solve the problem.
 
-// 						If you are not sure about anything pertaining to the user's request, use your
-// 						tools to read files, browse the web and visit websites and gather the relevant
-// 						information: do NOT guess or make up an answer.
-// 						Answer only in the language of the question.
+						If you are not sure about anything pertaining to the user's request, use your 
+						tools to read files, browse the web and visit websites and gather the relevant 
+						information: do NOT guess or make up an answer.
+						Answer only in the language of the question.
+					
+					Context:
+					${contextStr}
+					`,
+				},
+				{
+					role: 'user',
+					content: prompt,
+				},
+			],
+			parameters: {
+				max_new_tokens: 1024,
+				temperature: 0.5,
+				top_p: 0.95,
+			},
+		});
 
-// 					Context:
-// 					${contextStr}
-// 					`,
-// 				},
-// 				{
-// 					role: 'user',
-// 					content: prompt,
-// 				},
-// 			],
-// 			parameters: {
-// 				max_new_tokens: 1024,
-// 				temperature: 0.5,
-// 				top_p: 0.95,
-// 			},
-// 		});
-
-// 		return chatCompletion.choices[0].message.content;
-// 	} catch (error) {
-// 		console.error('Error generating response with Mistral:', error);
-// 		throw error;
-// 	}
-// }
-
-// --- Orchestrator ---
-async function orchestrator(query) {
-	// Get results from both workers in parallel
-	const [supabaseAnswer, tavilyResults] = await Promise.all([
-		supabaseWorker(query),
-		tavilyWorker(query),
-	]);
-	console.log('Supabase answer:', supabaseAnswer);
-	console.log('Tavily results:', tavilyResults);
-
-	// Get website content
-	let websiteContents = [];
-	if (tavilyResults?.results) {
-		const tavilyUrls = tavilyResults.results.map((r) => r.url);
-		const tavilyContents = await Promise.all(
-			tavilyUrls.map((url) => visitWebsite(url))
-		);
-		websiteContents.push(...tavilyContents.filter(Boolean));
+		return chatCompletion.choices[0].message.content;
+	} catch (error) {
+		console.error('Error generating response with Mistral:', error);
+		throw error;
 	}
-
-	// Merge all sources information
-	const context = {
-		supabase: supabaseAnswer,
-		tavily: tavilyResults,
-	};
-
-	// Get combined answer from DeepSeek
-	const finalAnswer = await getAnswerFromLLMWorker(query, context);
-	console.log('Answer:', finalAnswer);
-
-	return {
-		query,
-		supabase: supabaseAnswer,
-		tavily: tavilyResults,
-		answer: finalAnswer,
-		sources: context,
-	};
 }
 
 // Route for handling queries
@@ -228,8 +195,37 @@ app.post('/answerQuery', async (req, res) => {
 	}
 
 	try {
-		const result = await orchestrator(query);
-		res.json(result);
+		// Parallel execution of all search tasks
+		const [supabaseAnswer, tavilyResults] = await Promise.all([
+			getSupabaseAnswer(query),
+			searchWithTavily(query),
+		]);
+		console.log('Supabase answer:', supabaseAnswer);
+
+		// Get website content
+		let websiteContents = [];
+		if (tavilyResults?.results) {
+			const tavilyUrls = tavilyResults.results.map((r) => r.url);
+			const tavilyContents = await Promise.all(
+				tavilyUrls.map((url) => visitWebsite(url))
+			);
+			websiteContents.push(...tavilyContents.filter(Boolean));
+		}
+
+		// Merge all sources information
+		const context = {
+			supabase: supabaseAnswer,
+			tavily: tavilyResults,
+			// websiteContents: websiteContents,
+		};
+
+		// Generate final answer
+		const finalAnswer = await generateResponse(query, context);
+		console.log('Final answer:', finalAnswer);
+		res.json({
+			answer: finalAnswer,
+			sources: context,
+		});
 	} catch (error) {
 		console.error('Error processing query:', error);
 		res.status(500).json({
