@@ -89,6 +89,8 @@ PORT=3000
 node orchestrator-agent.js
 ```
 
+Open: http://localhost:3000/query.html
+
 ## Important Notes
 
 - Please ensure all necessary API keys are properly configured before use
