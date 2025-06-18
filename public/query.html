@@ -16,15 +16,14 @@
 			<main>
 				<div class="query-box">
 					<p class="intro-text">
-						Ställ din fråga om föräldrapenning, barnbidrag, vab eller andra
-						försäkringsfrågor.
+						Ställ din fråga om föräldrapenning, barnbidrag eller andra
+						försäkringsfrågor
 					</p>
 
 					<form id="queryForm">
 						<div class="input-group">
 							<textarea
-								id="query"
-								name="query"
+								id="userQuery"
 								placeholder="Skriv din fråga här..."
 								rows="4"
 								required
@@ -37,77 +36,14 @@
 					</form>
 				</div>
 
-				<div class="response-box" id="answer">
+				<div class="response-box" id="responseBox">
 					<!-- Response will be displayed here -->
 				</div>
 			</main>
 
 			<footer>
-				<p>© 2024 Försäkringskassan AI chatbot</p>
+				<p>© 2024 Försäkringskassan</p>
 			</footer>
 		</div>
-
-		<script>
-			document
-				.getElementById('queryForm')
-				.addEventListener('submit', async (e) => {
-					e.preventDefault();
-					const query = e.target.query.value;
-					const answerElement = document.getElementById('answer');
-
-					// Display loading status
-					answerElement.innerHTML = '<p>Processing, please wait...</p>';
-
-					try {
-						const response = await fetch('/answerQuery', {
-							method: 'POST',
-							headers: { 'Content-Type': 'application/json' },
-							credentials: 'include',
-							body: JSON.stringify({ query }),
-						});
-
-						if (!response.ok) {
-							throw new Error(`HTTP error! status: ${response.status}`);
-						}
-
-						const data = await response.json();
-						console.log('\nAnswer from the large language model:', data);
-
-						// Display answer
-						let responseHTML = `
-							<div class="answer">
-								<h3>Answer</h3>
-								<p>${data.answer}</p>
-							</div>
-							<div class="sources">
-								<h3>Sources</h3>`;
-
-						if (data.sources.supabase) {
-							responseHTML += `
-								<div class="source">
-									<h4>Supabase information:</h4>
-									<p>${data.sources.supabase}</p>
-								</div>`;
-						}
-						if (data.sources.tavily && data.sources.tavily.answer) {
-							responseHTML += `
-								<div class="source">
-									<h4>Tavily information:</h4>
-									<p>${data.sources.tavily.answer}</p>
-								</div>`;
-						}
-
-						responseHTML += `</div>`;
-						answerElement.innerHTML = responseHTML;
-					} catch (error) {
-						console.error('Error:', error);
-						answerElement.innerHTML = `
-							<div class="error">
-								<p>Error: ${error.message}</p>
-							</div>
-						`;
-					}
-				});
-		</script>
 	</body>
 </html>

@@ -34,8 +34,7 @@ async function parsePdf(pdfPath) {
 // for a larger embedding dimension.
 // ------------------------------------------------------------
 
-function splitText(text, chunkSize = 3200, overlapSize = 1600) {
-	//chunkSize = 1500, overlapSize = 750
+function splitText(text, chunkSize = 1500, overlapSize = 750) {
 	console.log('Splitting text...');
 	const chunks = [];
 	let startIndex = 0;
@@ -79,7 +78,7 @@ const path = require('path');
 async function storeEmbeddingsToCSV(
 	chunks,
 	embeddings,
-	outputPath = 'FK_3200_1600.csv'
+	outputPath = 'FK_parent_child.csv'
 ) {
 	// Create CSV header
 	let csvContent = 'text,embedding\n';
